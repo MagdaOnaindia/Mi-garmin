@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Garmin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="data.js" onerror="void 0"></script>
+<script src="demo.js" onerror="void 0"></script>
+<style>
+:root{
+  --bg:#f7f6f3;--card:#ffffff;--ink:#1f2328;--muted:#6b7078;--line:#e6e3dd;
+  --green:#2e8b57;--amber:#d08a11;--red:#c8463d;
+  --c1:#3d6fd9;--c2:#d9527a;--c3:#2a9d8f;--c4:#e09f3e;--c5:#8a63d2;--c6:#7a8b99;--c7:#5bb36a;--c8:#b5838d;
+  --ph-m:rgba(200,70,61,.10);--ph-f:rgba(61,111,217,.07);--ph-o:rgba(224,159,62,.14);--ph-l:rgba(138,99,210,.09);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15171a;--card:#1e2125;--ink:#e8e6e1;--muted:#9aa0a6;--line:#2e3237;
+  --ph-m:rgba(230,100,90,.16);--ph-f:rgba(100,150,240,.10);--ph-o:rgba(240,180,80,.16);--ph-l:rgba(170,130,240,.13);
+}}
+:root[data-theme="dark"]{--bg:#15171a;--card:#1e2125;--ink:#e8e6e1;--muted:#9aa0a6;--line:#2e3237;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+h1{font-size:24px;margin:0}
+h2{font-size:17px;margin:32px 0 10px}
+.muted{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.grid2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.tile .v{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums}
+.tile .l{color:var(--muted);font-size:13px}
+.tile .s{font-size:12px;color:var(--muted)}
+.chart{position:relative;height:240px}
+.empty{color:var(--muted);font-size:14px;padding:30px 0;text-align:center}
+.sem{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.dot{width:54px;height:54px;border-radius:50%;flex:none}
+.verde{background:var(--green)}.ambar{background:var(--amber)}.rojo{background:var(--red)}
+.chips span{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:2px 10px;margin:2px 4px 2px 0;font-size:13px}
+.chips i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto}
+.banner{background:var(--card);border:1px dashed var(--amber);border-radius:12px;padding:12px 16px;margin-top:14px}
+select{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:4px 8px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 12px;cursor:pointer}
+.legend span{font-size:12px;margin-right:12px;color:var(--muted)}
+.legend b{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Mi Garmin</h1>
+  <span class="muted" id="gen"></span>
+</header>
+<div id="banner"></div>
+
+<h2>Hoy</h2>
+<div class="card" id="semaforo"></div>
+<div class="grid" style="margin-top:12px" id="tiles"></div>
+
+<h2>Recuperación</h2>
+<div class="legend" id="phaseLegend"></div>
+<div class="grid2">
+  <div class="card"><b>VFC nocturna (ms)</b><div class="muted">Puntos: cada noche · línea: media 7 días · franja: tu rango normal</div><div class="chart"><canvas id="cHrv"></canvas></div></div>
+  <div class="card"><b>FC en reposo (lpm)</b><div class="muted">Línea discontinua: tu media de 30 días</div><div class="chart"><canvas id="cRhr"></canvas></div></div>
+  <div class="card"><b>Sueño (horas)</b><div class="muted">Profundo, REM, ligero y despierta · objetivo ≥ 7 h</div><div class="chart"><canvas id="cSleep"></canvas></div></div>
+  <div class="card"><b>Body Battery y estrés</b><div class="muted">Body Battery al despertar y estrés medio del día</div><div class="chart"><canvas id="cBB"></canvas></div></div>
+</div>
+
+<h2>Entrenamiento</h2>
+<div class="grid2">
+  <div class="card"><b>Minutos por tipo y semana</b><div class="chart"><canvas id="cWeekMin"></canvas></div></div>
+  <div class="card"><b>Carga por esfuerzo percibido (sRPE) y ratio agudo:crónico</b><div class="muted">Barras: sRPE diario · línea: ratio 7 d / 28 d (zona 0,8–1,3)</div><div class="chart"><canvas id="cLoad"></canvas></div></div>
+  <div class="card"><b>Minutos de intensidad por semana</b><div class="muted">OMS: 150–300 min (los vigorosos cuentan doble)</div><div class="chart"><canvas id="cIM"></canvas></div></div>
+  <div class="card"><b>Pasos diarios</b><div class="muted">Beneficio máximo hacia 8.000–10.000</div><div class="chart"><canvas id="cSteps"></canvas></div></div>
+</div>
+
+<h2>Ánimo y energía</h2>
+<div class="grid2">
+  <div class="card"><b>Ánimo y energía diarios (1–5)</b><div class="muted">Media de tus registros del día (atajo) o, si no hay, el ánimo registrado en Garmin</div><div class="chart"><canvas id="cMood"></canvas></div></div>
+  <div class="card scroll" id="notes"></div>
+</div>
+
+<h2>Nutrición y medidas</h2>
+<div class="grid2">
+  <div class="card"><b>Peso (kg)</b><div class="muted">Puntos: cada pesada · línea: media 7 días (mira la tendencia, no el día)</div><div class="chart"><canvas id="cWeight"></canvas></div></div>
+  <div class="card"><b>Proteína (g por kg de peso)</b><div class="muted">Línea: 1,6 g/kg, el punto a partir del cual no se gana más músculo extra con fuerza</div><div class="chart"><canvas id="cProt"></canvas></div></div>
+  <div class="card"><b>Kcal ingeridas frente a gasto de Garmin</b><div class="muted">El gasto de Garmin es una estimación; úsalo para ver tendencias, no el número exacto</div><div class="chart"><canvas id="cKcal"></canvas></div></div>
+  <div class="card"><b>Macros (g al día, Cronometer)</b><div class="muted" id="macroSplit">Días completos en Cronometer (marcados o con más de 1.200 kcal)</div><div class="chart"><canvas id="cMacros"></canvas></div></div>
+  <div class="card scroll" id="microTable"></div>
+  <div class="card scroll" id="metricsTable"></div>
+</div>
+
+<h2>Relaciones</h2>
+<div class="card">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <label class="muted">Qué mirar <select id="relOut"></select></label>
+    <label class="muted"><input type="checkbox" id="relAll"> incluir las que aún tienen pocos datos</label>
+  </div>
+  <div class="scroll" id="rel" style="margin-top:8px"></div>
+  <div class="muted" style="margin-top:6px">"Creatina saturada" compara días con ≥20 tomas en los últimos 28 frente a días sin nada en 35; los días en transición no cuentan. Compara días con el factor frente a días sin él. "Tamaño" = diferencia en desviaciones típicas: hacia 0,2 pequeña, 0,5 moderada, 0,8 o más grande. Son asociaciones, no causas.</div>
+</div>
+
+<div class="card scroll" style="margin-top:12px" id="creaCard"></div>
+
+<h2>Ciclo</h2>
+<div class="card" id="cycleNow"></div>
+<div class="card" style="margin-top:12px"><b>Tu media por día del ciclo</b><div class="muted">Ánimo (1–5, eje izquierdo), puntuación de sueño y VFC (eje derecho)</div><div class="chart"><canvas id="cCycle"></canvas></div></div>
+<div class="card scroll" style="margin-top:12px" id="phaseTable"></div>
+
+<h2>Sesiones recientes</h2>
+<div class="card scroll" id="acts"></div>
+
+<p class="muted" style="margin-top:30px">Reglas y estudios: carpeta <code>research/</code>. Para actualizar: <code>uv run ~/Projects/Garmin/sync/garmin_sync.py</code> y recarga esta página.</p>
+</main>
+
+<script>
+const REAL = window.GARMIN_DATA, DEMO = window.GARMIN_DEMO;
+let useDemo = !(REAL && REAL.days && REAL.days.length);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const CATCOL = {HIIT:'--c2',Fuerza:'--c1',Movilidad:'--c5',Bici:'--c3',Cinta:'--c4',Caminar:'--c7',Otro:'--c6'};
+const PHCOL = {Menstrual:'--ph-m',Folicular:'--ph-f',Ovulatoria:'--ph-o','Lútea':'--ph-l'};
+const charts = [];
+const fmt = (v,d=0) => v==null||Number.isNaN(v) ? '—' : Number(v).toLocaleString('es-ES',{maximumFractionDigits:d,minimumFractionDigits:d});
+const short = s => { const d=new Date(s+'T12:00'); return d.toLocaleDateString('es-ES',{day:'numeric',month:'short'}); };
+const last = (arr,k) => { for (let i=arr.length-1;i>=0;i--) if (arr[i][k]!=null) return arr[i]; return null; };
+
+// Sombreado de fases del ciclo detrás de cada gráfica diaria
+const phasePlugin = {id:'phases', beforeDraw(chart, _a, opt){
+  const days = opt.days; if(!days) return;
+  const {ctx, chartArea:a, scales:{x}} = chart; if(!a) return;
+  ctx.save();
+  days.forEach((d,i)=>{ if(!d.phase) return;
+    const w = (x.getPixelForValue(1)-x.getPixelForValue(0)) || (a.right-a.left);
+    const cx = x.getPixelForValue(i);
+    ctx.fillStyle = css(PHCOL[d.phase]); ctx.fillRect(cx-w/2, a.top, w, a.bottom-a.top);
+  });
+  ctx.restore();
+}};
+Chart.register(phasePlugin);
+
+function base(extra={}){
+  const ink = css('--muted'), line = css('--line');
+  return Object.assign({responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:ink,boxWidth:12,font:{size:12}}}, phases:{days:null}},
+    scales:{x:{ticks:{color:ink,maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
+            y:{ticks:{color:ink},grid:{color:line}}}}, extra);
+}
+function mk(id, cfg, needs, msg){
+  const el = document.getElementById(id);
+  if (!needs){ el.parentElement.innerHTML = `<div class="empty">${msg}</div>`; return; }
+  charts.push(new Chart(el, cfg));
+}
+const has = (arr,k,n=1) => arr.filter(r=>r[k]!=null && r[k]!==0).length >= n;
+
+function render(){
+  charts.splice(0).forEach(c=>c.destroy());
+  document.querySelectorAll('.chart').forEach(c=>{ if(!c.querySelector('canvas')) c.innerHTML='<canvas></canvas>'; });
+  const D = useDemo ? DEMO : REAL;
+  const banner = document.getElementById('banner');
+  if (useDemo){
+    banner.innerHTML = `<div class="banner"><b>Datos de ejemplo inventados.</b> Todavía no hay datos reales sincronizados; así se verá el panel cuando los haya. ${REAL&&REAL.days&&REAL.days.length?'<button onclick="useDemo=false;render()">Ver mis datos</button>':''}</div>`;
+  } else banner.innerHTML = DEMO ? `<div style="margin-top:8px"><button onclick="useDemo=true;render()">Ver ejemplo con 90 días</button></div>` : '';
+  if (!D){ document.getElementById('semaforo').innerHTML='<div class="empty">Aún no hay datos. Ejecuta la sincronización.</div>'; return; }
+  document.getElementById('gen').textContent = 'Actualizado ' + D.generated_at.replace('T',' ');
+  const days = D.days.slice(-60), labels = days.map(d=>short(d.date));
+
+  // Semáforo
+  const S = D.semaforo, sem = document.getElementById('semaforo');
+  const txt = {verde:'Buena recuperación. Plan normal: si toca tabata o fuerza, a por ello.',
+               ambar:'Recuperación a medias. Entrena, pero baja un escalón: menos series o más descanso, y cardio suave en vez de intervalos.',
+               rojo:'Día de recuperar: caminar, movilidad y la rutina de psoas/cadera/lumbar. Si se repite varios días, revisamos sueño y carga.'};
+  const lbl = ['rojo','ámbar','verde'];
+  sem.innerHTML = S ? `<div class="sem"><div class="dot ${S.level}"></div><div><b>${short(S.date)}: ${S.level==='ambar'?'ámbar':S.level}</b><div>${txt[S.level]}</div>
+     <div class="chips" style="margin-top:6px">${Object.entries(S.components).map(([k,v])=>`<span><i class="${['rojo','ambar','verde'][v]}"></i>${k}: ${lbl[v]}</span>`).join('')}</div></div></div>`
+     : '<div class="empty">El semáforo aparece tras la primera noche con el reloj puesto.</div>';
+
+  // Tiles
+  const t = (l,v,s='') => `<div class="card tile"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  const dH=last(days,'hrv_night'), dR=last(days,'rhr'), dS=last(days,'sleep_s'), dB=last(days,'bb_wake'), dT=last(days,'steps'), dV=last(days,'vo2max'), dRd=last(days,'readiness');
+  const wk = D.weeks[D.weeks.length-1] || {};
+  const strength = wk.sessions ? (wk.sessions.Fuerza||0)+(wk.sessions.Movilidad||0) : 0;
+  document.getElementById('tiles').innerHTML =
+    t('VFC anoche', dH?fmt(dH.hrv_night)+' ms':'—', dH&&dH.hrv_7d?`media 7 d: ${fmt(dH.hrv_7d)}`:'calibrando (≈3 semanas)') +
+    t('FC en reposo', dR?fmt(dR.rhr)+' lpm':'—', dR&&dR.rhr_base?`tu media 30 d: ${fmt(dR.rhr_base,1)}`:'calibrando (7 días)') +
+    t('Sueño', dS?fmt(dS.sleep_h,1)+' h':'—', dS&&dS.sleep_score?`puntuación ${dS.sleep_score}`:'') +
+    t('Body Battery al despertar', dB?fmt(dB.bb_wake):'—') +
+    t('Preparación', dRd?fmt(dRd.readiness):'—', dRd&&dRd.readiness_level?dRd.readiness_level.toLowerCase():'') +
+    t('Pasos', dT?fmt(dT.steps):'—', dT?short(dT.date):'') +
+    t('Fuerza esta semana', `${strength} / 2+`, 'sesiones (OMS: ≥2)') +
+    t('Intensidad esta semana', wk.intensity_min!=null?`${fmt(wk.intensity_min)} min`:'—', 'objetivo 150') +
+    t('VO2 max', dV?fmt(dV.vo2max,1):'—', dV?'':'necesita sesiones con FC');
+
+  // Leyenda de fases
+  document.getElementById('phaseLegend').innerHTML = days.some(d=>d.phase) ?
+    'Fondo de las gráficas: ' + Object.keys(PHCOL).map(p=>`<span><b style="background:${css(PHCOL[p]).replace(/[\d.]+\)$/,'.45)')}"></b>${p}</span>`).join('') : '';
+
+  const P = {phases:{days}};
+  const c1=css('--c1'), c2=css('--c2'), c3=css('--c3'), c4=css('--c4'), c5=css('--c5'), mu=css('--muted');
+
+  // VFC
+  const hasGarminBand = days.some(d=>d.hrv_base_low);
+  const lo = days.map(d=> d.hrv_base_low ?? (d.hrv_base!=null? d.hrv_base - d.hrv_base_sd : null));
+  const hi = days.map(d=> d.hrv_base_high ?? (d.hrv_base!=null? d.hrv_base + d.hrv_base_sd : null));
+  mk('cHrv',{type:'line',data:{labels,datasets:[
+      {label:'Rango normal',data:hi,borderWidth:0,pointRadius:0,backgroundColor:c3+'33',fill:'+1'},
+      {label:'_lo',data:lo,borderWidth:0,pointRadius:0,fill:false},
+      {label:'Noche',data:days.map(d=>d.hrv_night),showLine:false,pointRadius:3,backgroundColor:c1,borderColor:c1},
+      {label:'Media 7 d',data:days.map(d=>d.hrv_7d),borderColor:c1,borderWidth:2.5,pointRadius:0,spanGaps:true}]},
+    options:base({plugins:{...base().plugins,...P,legend:{labels:{color:mu,boxWidth:12,filter:i=>!i.text.startsWith('_')}}}})},
+    has(days,'hrv_night'), 'La VFC se mide mientras duermes. Aparecerá tras la primera noche con el reloj.');
+
+  // FC reposo
+  mk('cRhr',{type:'line',data:{labels,datasets:[
+      {label:'FC reposo',data:days.map(d=>d.rhr),borderColor:c2,backgroundColor:c2,pointRadius:2,borderWidth:2,spanGaps:true},
+      {label:'Media 30 d',data:days.map(d=>d.rhr_base),borderColor:mu,borderDash:[5,4],pointRadius:0,borderWidth:1.5,spanGaps:true}]},
+    options:base({plugins:{...base().plugins,...P}})}, has(days,'rhr'), 'Sin datos de FC en reposo todavía.');
+
+  // Sueño
+  const h = k => days.map(d=>d[k]!=null? +(d[k]/3600).toFixed(2) : null);
+  mk('cSleep',{type:'bar',data:{labels,datasets:[
+      {label:'Profundo',data:h('deep_s'),backgroundColor:c1},{label:'REM',data:h('rem_s'),backgroundColor:c5},
+      {label:'Ligero',data:h('light_s'),backgroundColor:c3+'aa'},{label:'Despierta',data:h('awake_s'),backgroundColor:c4+'aa'}]},
+    options:base({plugins:{...base().plugins,...P},scales:{...base().scales,x:{...base().scales.x,stacked:true},y:{...base().scales.y,stacked:true,suggestedMax:9}}})},
+    has(days,'sleep_s'), 'Duerme con el reloj puesto para ver aquí tus noches.');
+
+  // BB y estrés
+  mk('cBB',{type:'line',data:{labels,datasets:[
+      {label:'Body Battery al despertar',data:days.map(d=>d.bb_wake),borderColor:c3,pointRadius:2,spanGaps:true},
+      {label:'Estrés medio',data:days.map(d=>d.stress_avg),borderColor:c4,pointRadius:2,spanGaps:true}]},
+    options:base({plugins:{...base().plugins,...P},scales:{...base().scales,y:{...base().scales.y,min:0,max:100}}})},
+    has(days,'bb_wake')||has(days,'stress_avg'), 'Sin datos de Body Battery todavía.');
+
+  // Minutos por tipo y semana
+  const W = D.weeks.slice(-12);
+  const cats = D.categories.filter(c=>W.some(w=>w.minutes&&w.minutes[c]));
+  mk('cWeekMin',{type:'bar',data:{labels:W.map(w=>'sem '+short(w.week)),datasets:cats.map(c=>({label:c,data:W.map(w=>w.minutes[c]||0),backgroundColor:css(CATCOL[c])}))},
+    options:base({scales:{...base().scales,x:{...base().scales.x,stacked:true},y:{...base().scales.y,stacked:true}}})},
+    cats.length, 'Graba tus sesiones con el reloj y aparecerán aquí por tipo (HIIT, fuerza, bici, cinta...).');
+
+  // Carga sRPE + ACWR
+  mk('cLoad',{data:{labels,datasets:[
+      {type:'bar',label:'sRPE',data:days.map(d=>d.srpe||null),backgroundColor:c2+'aa',yAxisID:'y'},
+      {type:'line',label:'Ratio agudo:crónico',data:days.map(d=>d.acwr),borderColor:c1,pointRadius:0,borderWidth:2,yAxisID:'y1',spanGaps:true}]},
+    options:base({scales:{...base().scales,y1:{position:'right',min:0,max:2,ticks:{color:mu},grid:{display:false}}}})},
+    has(days,'srpe'), 'Al terminar cada sesión, puntúa el esfuerzo (1–10) en el reloj. Con eso calculamos la carga real de la fuerza y el tabata. El ratio necesita 21 días.');
+
+  // Intensidad semanal
+  mk('cIM',{type:'bar',data:{labels:W.map(w=>'sem '+short(w.week)),datasets:[
+      {label:'Minutos de intensidad',data:W.map(w=>w.intensity_min),backgroundColor:W.map(w=>w.intensity_min>=150?css('--green'):c4)}]},
+    options:base({plugins:{...base().plugins,legend:{display:false}}})}, W.length, 'Sin semanas registradas todavía.');
+
+  // Pasos
+  mk('cSteps',{type:'bar',data:{labels,datasets:[{label:'Pasos',data:days.map(d=>d.steps),backgroundColor:days.map(d=>(d.steps||0)>=8000?c3:c3+'66')}]},
+    options:base({plugins:{...base().plugins,legend:{display:false}}})}, has(days,'steps'), 'Sin pasos todavía.');
+
+  // Ánimo
+  mk('cMood',{type:'line',data:{labels,datasets:[
+      {label:'Ánimo',data:days.map(d=>d.mood),borderColor:c2,backgroundColor:c2,pointRadius:2,spanGaps:true},
+      {label:'Energía',data:days.map(d=>d.energy),borderColor:c4,backgroundColor:c4,pointRadius:2,spanGaps:true}]},
+    options:base({plugins:{...base().plugins,...P},scales:{...base().scales,y:{...base().scales.y,min:1,max:5}}})},
+    has(days,'mood'), 'Registra tu ánimo en Garmin Connect (Salud femenina) o con el atajo del iPhone y aparecerá aquí.');
+  const N = (D.notes||[]).slice(-10).reverse();
+  document.getElementById('notes').innerHTML = N.length ?
+    `<b>Últimas notas</b><table><tr><th>Cuándo</th><th>Ánimo</th><th>Energía</th><th>Nota</th></tr>${N.map(n=>`<tr><td>${short(n.date)} ${n.ts.slice(11,16)}</td><td>${fmt(n.mood)}</td><td>${fmt(n.energy)}</td><td style="white-space:normal">${String(n.note).replace(/[<>&]/g,'')}</td></tr>`).join('')}</table>`
+    : '<b>Últimas notas</b><div class="empty">Las notas que escribas con el atajo aparecerán aquí.</div>';
+
+  // Nutrición y medidas
+  const NK = D.nutrition_keys||{}, MC = D.metrics_config||[];
+  const wKey = NK.weight && 'm_'+NK.weight;
+  mk('cWeight',{type:'line',data:{labels,datasets:[
+      {label:'Pesada',data:days.map(d=>d.weight),showLine:false,pointRadius:3,borderColor:c1,backgroundColor:c1},
+      {label:'Media 7 d',data:days.map(d=>d.weight_7d),borderColor:c1,borderWidth:2.5,pointRadius:0,spanGaps:true}]},
+    options:base({plugins:{...base().plugins,...P}})}, has(days,'weight'), 'Registra tu peso en la app del móvil o en Cronometer (1 o 2 veces por semana, en ayunas) y aparecerá aquí.');
+  const PT = D.protein_target||1.6;
+  mk('cProt',{data:{labels,datasets:[
+      {type:'bar',label:'g/kg',data:days.map(d=>d.protein_gkg),backgroundColor:days.map(d=>(d.protein_gkg||0)>=PT?css('--green'):c4)},
+      {type:'line',label:'Objetivo',data:days.map(()=>PT),borderColor:mu,borderDash:[5,4],pointRadius:0,borderWidth:1.5}]},
+    options:base()}, has(days,'protein_gkg'), 'Necesita la proteína del día (Cronometer o app del móvil) y al menos una pesada.');
+  mk('cKcal',{type:'line',data:{labels,datasets:[
+      {label:'Ingeridas',data:days.map(d=>d.kcal_in),borderColor:c2,backgroundColor:c2,pointRadius:2,spanGaps:true},
+      {label:'Gasto Garmin',data:days.map(d=>d.kcal_total),borderColor:c3,backgroundColor:c3,pointRadius:0,spanGaps:true}]},
+    options:base({plugins:{...base().plugins,...P}})}, has(days,'kcal_in'), 'Registra lo que comes en Cronometer (o las kcal en la app del móvil) para compararlo con tu gasto.');
+  const MS = D.macro_split;
+  if (MS) document.getElementById('macroSplit').textContent = `Últimos ${MS.n} días completos: proteína ${MS.protein}% · hidratos ${MS.carbs}% · grasa ${MS.fat}% de las kcal`;
+  const nd = days.slice(-28);
+  mk('cMacros',{type:'bar',data:{labels:nd.map(d=>short(d.date)),datasets:[
+      {label:'Proteína',data:nd.map(d=>d.nut_protein),backgroundColor:c1},
+      {label:'Hidratos',data:nd.map(d=>d.nut_carbs),backgroundColor:c4},
+      {label:'Grasa',data:nd.map(d=>d.nut_fat),backgroundColor:c3}]},
+    options:base({scales:{...base().scales,x:{...base().scales.x,stacked:true},y:{...base().scales.y,stacked:true}}})},
+    has(nd,'nut_protein'), 'Registra lo que comes en Cronometer; la sincronización lo importa.');
+  const MI = D.micros||[];
+  const pc = v => v==null?'':v>=100?'pos':v<70?'neg':'';
+  document.getElementById('microTable').innerHTML = MI.some(m=>m.n28) ?
+    `<b>Fibra y micronutrientes</b> <span class="muted">(media de días completos frente a lo recomendado para mujer adulta)</span>
+     <table><tr><th>Nutriente</th><th>Objetivo</th><th>7 días</th><th>28 días</th></tr>
+     ${MI.map(m=>`<tr><td>${m.label}</td><td>${fmt(m.target,m.target<10?1:0)} ${m.unit}</td>
+       <td class="${pc(m.pct7)}">${m.avg7==null?'–':fmt(m.avg7,m.target<10?1:0)+' · '+m.pct7+'%'}</td>
+       <td class="${pc(m.pct28)}">${m.avg28==null?'–':fmt(m.avg28,m.target<10?1:0)+' · '+m.pct28+'%'} <span class="muted">(${m.n28} d)</span></td></tr>`).join('')}</table>
+     <div class="muted" style="margin-top:6px">Verde: llegas al objetivo · rojo: por debajo del 70%. Hierro: 18 mg es para mujeres con regla. Si tomas suplementos, regístralos en Cronometer para que cuenten.</div>`
+    : '<b>Fibra y micronutrientes</b><div class="empty">Con unos días registrados en Cronometer verás aquí hierro, calcio, vitamina D, magnesio, B12, folato, zinc, potasio y fibra frente a lo recomendado.</div>';
+  const last14 = days.slice(-14).reverse();
+  document.getElementById('metricsTable').innerHTML = MC.length ?
+    `<b>Medidas de los últimos 14 días</b><table><tr><th>Día</th>${MC.map(m=>`<th>${m.label}${m.unit?' ('+m.unit+')':''}</th>`).join('')}</tr>
+     ${last14.map(d=>`<tr><td>${short(d.date)}</td>${MC.map(m=>`<td>${fmt(d['m_'+m.key],1)}</td>`).join('')}</tr>`).join('')}</table>`
+    : '<b>Medidas</b><div class="empty">Las medidas que registres en la app del móvil (peso, proteína, agua, dolor...) aparecerán aquí.</div>';
+
+  // Relaciones
+  const R = D.relations||[], sel = document.getElementById('relOut'), all = document.getElementById('relAll');
+  const outs = [...new Set(R.map(r=>r.outcome))];
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todo</option>' + outs.map(o=>`<option${o===prev?' selected':''}>${o}</option>`).join('');
+  const lowerBetter = {rhr:1, stress_avg:1};
+  const drawRel = () => {
+    const rows = R.filter(r=>(!sel.value||r.outcome===sel.value)&&(all.checked||r.enough)).slice(0, sel.value?40:15);
+    document.getElementById('rel').innerHTML = rows.length ?
+      `<table><tr><th>Factor</th><th>Resultado</th><th>Con</th><th>Sin</th><th>Diferencia</th><th>Tamaño</th><th>Días (con / sin)</th></tr>
+       ${rows.map(r=>{const good=(r.diff>0)!==!!lowerBetter[r.key]; const big=Math.abs(r.effect||0)>=0.2;
+         return `<tr><td>${r.factor}</td><td>${r.outcome}</td><td>${fmt(r.with,1)}</td><td>${fmt(r.without,1)}</td>
+         <td class="${big?(good?'pos':'neg'):''}">${r.diff>0?'+':''}${fmt(r.diff,1)}</td><td>${fmt(Math.abs(r.effect||0),2)}</td>
+         <td>${r.n_with} / ${r.n_without}${r.enough?'':' · pocos datos'}</td></tr>`}).join('')}</table>`
+      : `<div class="empty">Aún no hay relaciones con al menos ${D.min_n||8} días en cada grupo. Irán apareciendo según registres.</div>`;
+  };
+  sel.onchange = drawRel; all.onchange = drawRel; drawRel();
+
+  // Creatina (nutrition/creatina.py -> data/creatina.json)
+  const CR = D.creatina, esc = t => String(t??'').replace(/[<>&]/g,'');
+  document.getElementById('creaCard').innerHTML = CR && CR.medidas ?
+    `<b>Creatina: periodos saturada frente a sin creatina</b>
+     <div class="muted">Días con toma: ${CR.dias_con_toma} · saturada ${CR.dias_por_estado.saturada} · sin ${CR.dias_por_estado.sin} · transición ${CR.dias_por_estado['transición']}</div>
+     <table><tr><th>Medida</th><th>Con</th><th>Sin</th><th>Días (con / sin)</th><th>Tamaño (corregido por fase)</th><th>Lectura</th></tr>
+     ${CR.medidas.map(m=>`<tr><td>${esc(m.medida)}</td><td>${fmt(m.media_con,1)}</td><td>${fmt(m.media_sin,1)}</td><td>${m.n_con} / ${m.n_sin}</td>
+       <td>${m.d_por_fase!=null?fmt(Math.abs(m.d_por_fase),2):m.d!=null?fmt(Math.abs(m.d),2):'–'}</td><td style="white-space:normal">${esc(m.lectura)}</td></tr>`).join('')}</table>
+     <div class="muted" style="margin-top:6px">${esc(CR.nota)}</div>`
+    : '<b>Creatina</b><div class="empty">Registra la creatina en Cronometer o como hábito en la app del móvil. Hacen falta unas semanas tomándola a diario y unas semanas sin ella para comparar.</div>';
+
+  // Perfil por día del ciclo
+  const CP = D.cycle_profile||[];
+  mk('cCycle',{data:{labels:CP.map(c=>'día '+c.day),datasets:[
+      {type:'line',label:'Ánimo',data:CP.map(c=>c.mood),borderColor:c2,backgroundColor:c2,yAxisID:'y',spanGaps:true,pointRadius:2},
+      {type:'line',label:'Puntuación sueño',data:CP.map(c=>c.sleep_score),borderColor:c5,backgroundColor:c5,yAxisID:'y1',spanGaps:true,pointRadius:2},
+      {type:'line',label:'VFC',data:CP.map(c=>c.hrv_night),borderColor:c1,backgroundColor:c1,yAxisID:'y1',spanGaps:true,pointRadius:2}]},
+    options:base({scales:{...base().scales,y:{...base().scales.y,min:1,max:5},y1:{position:'right',ticks:{color:mu},grid:{display:false}}}})},
+    CP.filter(c=>c.n).length>=10, 'Con unas semanas de registros verás aquí cómo cambian tu ánimo, sueño y VFC a lo largo del ciclo.');
+
+  // Ciclo ahora
+  const cy = last(D.days,'cycle_day');
+  document.getElementById('cycleNow').innerHTML = cy ?
+    `<b>Día ${cy.cycle_day} de ${cy.cycle_len||28}</b> · fase ${cy.phase?cy.phase.toLowerCase():'—'} (estimada) <span class="muted">· ${short(cy.date)}</span>
+     ${cy.symptoms?`<div class="chips" style="margin-top:6px">${cy.symptoms.split(',').map(s=>`<span>${({CRAMPS:'dolor',BLOATING:'hinchazón',FATIGUE:'cansancio',HEADACHE:'dolor de cabeza',ACNE:'acné',BREAST_TENDERNESS:'pecho sensible'})[s]||s.toLowerCase()}</span>`).join('')}</div>`:''}
+     <div class="muted" style="margin-top:6px">${cy.phase==='Menstrual'?'Si hay dolor o cansancio, el tabata se puede hacer bajando impacto. La evidencia no obliga a parar: guíate por cómo te sientas.':cy.phase==='Lútea'?'Es normal que la VFC baje y la FC en reposo suba un poco en esta fase.':''}</div>`
+    : '<div class="empty">Activa "Salud femenina" en Garmin Connect y registra la regla para ver tu ciclo.</div>';
+
+  // Tabla por fase
+  const ph = D.phases, keys=[['n','Días',0],['mood','Ánimo',1],['energy','Energía',1],['hrv_night','VFC (ms)',0],['rhr','FC reposo',1],['sleep_h','Sueño (h)',1],['sleep_score','Punt. sueño',0],['bb_wake','Body Battery',0],['stress_avg','Estrés',0],['srpe','sRPE/día',0]];
+  const enough = Object.values(ph).filter(p=>p.n>0).length>=3;
+  document.getElementById('phaseTable').innerHTML = enough ?
+    `<b>Tus medias por fase</b> <span class="muted">(fiable a partir de 3 ciclos)</span><table><tr><th>Fase</th>${keys.map(k=>`<th>${k[1]}</th>`).join('')}</tr>
+     ${Object.entries(ph).map(([p,v])=>`<tr><td>${p}</td>${keys.map(k=>`<td>${fmt(v[k[0]],k[2])}</td>`).join('')}</tr>`).join('')}</table>`
+    : '<div class="empty">La comparación por fases aparecerá cuando tengamos al menos un ciclo completo registrado.</div>';
+
+  // Actividades
+  const A = D.activities.slice(-15).reverse();
+  document.getElementById('acts').innerHTML = A.length ?
+    `<table><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Min</th><th>FC media</th><th>FC máx</th><th>Efecto aer./anaer.</th><th>RPE</th><th>sRPE</th></tr>
+     ${A.map(a=>`<tr><td>${short(a.date)}</td><td><span style="color:${css(CATCOL[a.category]||'--c6')}">●</span> ${a.category}</td><td>${a.name||''}</td><td>${fmt(a.minutes)}</td><td>${fmt(a.avg_hr)}</td><td>${fmt(a.max_hr)}</td><td>${fmt(a.aerobic_te,1)} / ${fmt(a.anaerobic_te,1)}</td><td>${fmt(a.rpe)}</td><td>${fmt(a.srpe)}</td></tr>`).join('')}</table>`
+    : '<div class="empty">Aún no hay sesiones grabadas. Elige en el reloj el perfil correcto: HIIT, Fuerza, Bici interior o Cinta. La sesión de psoas, cadera y lumbar, como Fuerza con el nombre "Movilidad".</div>';
+}
+render();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+diff -ru -x comida orig/Dockerfile mobile/Dockerfile
+--- orig/Dockerfile	2026-10-07 14:59:11.755321358 +0000
++++ mobile/Dockerfile	2026-10-07 14:59:11.782125677 +0000
+@@ -2,6 +2,7 @@
+ WORKDIR /app
+ COPY server.js ./
+ COPY public ./public
++COPY comida ./comida
+ ENV NODE_ENV=production PORT=8080 DATA_DIR=/data
+ EXPOSE 8080
+ CMD ["node", "server.js"]
+diff -ru -x comida orig/public/index.html mobile/public/index.html
+--- orig/public/index.html	2026-10-07 14:59:11.754940763 +0000
++++ mobile/public/index.html	2026-10-07 14:59:11.783054167 +0000
+@@ -173,6 +173,7 @@
+   <button data-t="ent"><b>⚡︎</b>Entreno</button>
+   <button data-t="animo"><b>✎</b>Registro</button>
+   <button data-t="ciclo"><b>◐</b>Ciclo</button>
++  <button data-go="/comida"><b>◍</b>Comida</button>
+ </nav>
+ 
+ <script>
+@@ -195,7 +196,7 @@
+   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+   window.scrollTo(0,0); render();
+ }
+-document.querySelectorAll('nav button').forEach(b => b.onclick = () => showTab(b.dataset.t));
++document.querySelectorAll('nav button').forEach(b => b.onclick = b.dataset.go ? () => location.href = b.dataset.go : () => showTab(b.dataset.t));
+ document.querySelectorAll('.range').forEach(el => {
+   el.innerHTML = [14,30,60,90].map(n => `<button data-n="${n}">${n} días</button>`).join('');
+   el.onclick = e => { const n = +e.target.dataset.n; if (!n) return; RANGE = n; try { localStorage.setItem('mg_range', n); } catch {} render(); };
+diff -ru -x comida orig/server.js mobile/server.js
+--- orig/server.js	2026-10-07 14:59:11.755291638 +0000
++++ mobile/server.js	2026-10-07 14:59:11.779941494 +0000
+@@ -8,6 +8,7 @@
+ //   GET/POST /api/log     → hábitos y medidas del día hechos en la app (requiere sesión)
+ //   GET/PUT  /api/config  → qué hábitos y medidas aparecen en la app (requiere sesión)
+ //   GET  /api/log/export  → el Mac descarga todos los registros (Authorization: Bearer UPLOAD_TOKEN)
++//   /comida y /api/food/* → app de comida y micronutrientes (comida/comida.js)
+ //   GET  /api/push/key, POST /api/push/subscribe|unsubscribe|test → avisos en el iPhone (requiere sesión)
+ // Cada día a las REMIND_AT (hora de Madrid) avisa de rellenar el registro si ese día aún no hay nada apuntado.
+ 'use strict';
+@@ -89,6 +90,7 @@
+   fs.renameSync(tmp, file);
+ }
+ const readJson = (file, dflt) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return dflt; } };
++const foodApp = require('./comida/comida')({ DATA_DIR, LOG_FILE, send, json, readBody, readJson, writeAtomic });  // pestaña Comida
+ 
+ // Límite de intentos de contraseña: 10 cada 15 minutos por IP
+ const tries = new Map();
+@@ -207,6 +209,7 @@
+       });
+     }
+     if (p === '/logout') return send(res, 303, '', 'text/plain', { Location: '/login', 'Set-Cookie': `${COOKIE}=; Max-Age=0; Path=/` });
++    if (await foodApp(req, res, p, url, { session: sessionOk(req), bearer: bearerOk(req) }) !== false) return;
+ 
+     // Rutas del Mac (token)
+     if (p === '/api/upload' && req.method === 'POST') {

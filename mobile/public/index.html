@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi Garmin">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1f2328">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Mi Garmin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f7f6f3;--card:#ffffff;--ink:#1f2328;--muted:#6b7078;--line:#e6e3dd;--bar:rgba(247,246,243,.92);
+  --green:#2e8b57;--amber:#d08a11;--red:#c8463d;--accent:#2e8b57;
+  --c1:#3d6fd9;--c2:#d9527a;--c3:#2a9d8f;--c4:#e09f3e;--c5:#8a63d2;--c6:#7a8b99;--c7:#5bb36a;
+  --ph-m:rgba(200,70,61,.10);--ph-f:rgba(61,111,217,.07);--ph-o:rgba(224,159,62,.14);--ph-l:rgba(138,99,210,.09);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15171a;--card:#1e2125;--ink:#e8e6e1;--muted:#9aa0a6;--line:#2e3237;--bar:rgba(21,23,26,.92);
+  --ph-m:rgba(230,100,90,.16);--ph-f:rgba(100,150,240,.10);--ph-o:rgba(240,180,80,.16);--ph-l:rgba(170,130,240,.13);
+}}
+:root[data-theme="dark"]{--bg:#15171a;--card:#1e2125;--ink:#e8e6e1;--muted:#9aa0a6;--line:#2e3237;--bar:rgba(21,23,26,.92)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overscroll-behavior-y:none;min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+header h1{font-size:20px;margin:0;flex:1}
+header .muted{font-size:12px}
+main{padding:12px 16px calc(env(safe-area-inset-bottom) + 86px);max-width:720px;margin:0 auto;min-height:100vh;min-height:100dvh}
+section{display:none}section.on{display:block}
+h2{font-size:15px;margin:22px 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.muted{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;min-width:0}
+.grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.grid .card{margin:0}
+.tile .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile .l{color:var(--muted);font-size:12px}
+.tile .s{font-size:12px;color:var(--muted)}
+.chart{position:relative;height:220px;margin-top:6px}
+.empty{color:var(--muted);font-size:14px;padding:22px 4px;text-align:center}
+.sem{display:flex;gap:14px;align-items:flex-start}
+.dot{width:46px;height:46px;border-radius:50%;flex:none}
+.verde{background:var(--green)}.ambar{background:var(--amber)}.rojo{background:var(--red)}
+.chips span{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:2px 10px;margin:3px 4px 0 0;font-size:13px}
+.chips i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+button,select,input,textarea{font:inherit;color:var(--ink)}
+.icon{border:0;background:none;padding:6px;border-radius:10px;font-size:20px;line-height:1;cursor:pointer}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px;margin:4px 0 8px}
+.seg button{flex:1;border:0;background:none;padding:6px 0;border-radius:8px;font-size:14px;color:var(--muted)}
+.seg button.on{background:var(--bg);color:var(--ink);font-weight:600}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);padding:6px 4px calc(env(safe-area-inset-bottom) + 6px)}
+nav button{flex:1;border:0;background:none;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0}
+nav button b{font-size:21px;font-weight:400;line-height:1.1}
+nav button.on{color:var(--accent);font-weight:600}
+.act{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.act:last-child{border-bottom:0}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0 12px}
+.scale button{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 0;font-size:22px}
+.scale button small{display:block;font-size:11px;color:var(--muted)}
+.scale button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--card))}
+textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;font-size:16px;resize:vertical;min-height:64px}
+.primary{width:100%;border:0;background:var(--accent);color:#fff;font-weight:600;border-radius:12px;padding:13px;font-size:17px;margin-top:10px}
+.primary:disabled{opacity:.5}
+.ok{color:var(--green);font-size:14px;margin-top:8px;min-height:1.2em}
+.legend span{font-size:12px;margin-right:10px;color:var(--muted);white-space:nowrap}
+.legend b{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.hab{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.hab:last-child{border:0}.hab span{flex:1;font-size:15px}
+.yn{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.yn button{border:0;background:var(--bg);padding:7px 14px;font-size:14px;color:var(--muted)}
+.yn button.on{background:var(--accent);color:#fff;font-weight:600}
+.yn button.no.on{background:var(--muted)}
+.met{display:flex;align-items:center;gap:8px;padding:6px 0}
+.met span{flex:1;font-size:15px}.met small{color:var(--muted);width:42px}
+.met input{width:96px;text-align:right;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px;font-size:16px}
+.met input.saved{border-color:var(--accent)}
+.daybar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.daybar input{flex:1;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px;font-size:16px}
+.link{border:0;background:none;color:var(--accent);font-size:14px;padding:4px 0}
+.edit input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px;font-size:15px;flex:1;min-width:0}
+.edit .row{display:flex;gap:6px;margin:5px 0}
+.rel{padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}.rel:last-child{border:0}
+.ghost{width:100%;border:1px solid var(--accent);background:none;color:var(--accent);font-weight:600;border-radius:12px;padding:11px;font-size:16px}
+.ghost:disabled{opacity:.5}
+.goal{padding:10px 0;border-bottom:1px solid var(--line)}.goal:last-child{border:0}
+.goal .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.goal .top span{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:7px 0 5px}
+.bar i{display:block;height:100%;border-radius:99px}
+.src{font-size:11.5px;color:var(--muted);margin-top:2px}
+.wk td,.wk th{text-align:center;padding:6px 3px}.wk td:first-child,.wk th:first-child{text-align:left}
+.wk td.best{color:var(--green);font-weight:700}.wk td.worst{color:var(--red);font-weight:700}
+.grp{font-weight:650;margin:12px 0 2px}.grp:first-of-type{margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mi Garmin</h1>
+  <span class="muted" id="gen"></span>
+  <button class="icon" id="reload" aria-label="Actualizar">↻</button>
+</header>
+
+<main>
+<section id="t-hoy" class="on">
+  <div class="card" id="syncCard"><button class="ghost" id="syncBtn">Actualizar desde Garmin</button><div class="muted" id="syncMsg"></div></div>
+  <div class="card" id="semaforo"></div>
+  <div class="grid" id="tiles"></div>
+  <h2>Ciclo</h2>
+  <div class="card" id="cycleNow"></div>
+</section>
+
+<section id="t-rec">
+  <div class="seg range"></div>
+  <div class="legend" id="phaseLegend"></div>
+  <div class="card"><b>VFC nocturna (ms)</b><div class="muted">Puntos: cada noche · línea: media 7 días · franja: tu rango normal</div><div class="chart"><canvas id="cHrv"></canvas></div></div>
+  <div class="card"><b>FC en reposo (lpm)</b><div class="muted">Discontinua: tu media de 30 días</div><div class="chart"><canvas id="cRhr"></canvas></div></div>
+  <div class="card"><b>Sueño (horas)</b><div class="muted">Objetivo ≥ 7 h</div><div class="chart"><canvas id="cSleep"></canvas></div></div>
+  <div class="card"><b>Body Battery y estrés</b><div class="chart"><canvas id="cBB"></canvas></div></div>
+</section>
+
+<section id="t-ent">
+  <div class="seg range"></div>
+  <div class="card"><b>Minutos por tipo y semana</b><div class="chart"><canvas id="cWeekMin"></canvas></div></div>
+  <div class="card"><b>Carga (sRPE) y ratio agudo:crónico</b><div class="muted">Zona razonable del ratio: 0,8–1,3</div><div class="chart"><canvas id="cLoad"></canvas></div></div>
+  <div class="card"><b>Minutos de intensidad por semana</b><div class="muted">OMS: 150–300 min</div><div class="chart"><canvas id="cIM"></canvas></div></div>
+  <div class="card"><b>Pasos diarios</b><div class="chart"><canvas id="cSteps"></canvas></div></div>
+  <h2>Sesiones recientes</h2>
+  <div class="card" id="acts"></div>
+</section>
+
+<section id="t-animo">
+  <div class="card">
+    <b>¿Cómo estás ahora?</b>
+    <div class="muted" style="margin-top:6px">Ánimo</div>
+    <div class="scale" id="sMood"></div>
+    <div class="muted">Energía</div>
+    <div class="scale" id="sEnergy"></div>
+    <textarea id="note" maxlength="300" placeholder="Nota (opcional): dormí mal, mucho trabajo, dolor de regla..."></textarea>
+    <button class="primary" id="saveMood" disabled>Guardar</button>
+    <div class="ok" id="moodMsg"></div>
+  </div>
+  <div class="card" id="pending"></div>
+  <div class="card" id="remind"><b id="remindTitle">Recordatorio diario</b><div class="muted" id="remindTxt"></div>
+    <button class="primary" id="remindBtn" style="display:none"></button>
+    <button class="link" id="remindTest" style="display:none">Enviar un aviso de prueba</button>
+    <div class="ok" id="remindMsg" style="min-height:0"></div></div>
+  <h2>Hábitos y medidas</h2>
+  <div class="daybar"><input type="date" id="logDate"><button class="link" id="editBtn">Editar lista</button></div>
+  <div class="card" id="habits"></div>
+  <div class="card" id="metrics"></div>
+  <div class="card edit" id="editor" style="display:none"></div>
+  <div class="seg range"></div>
+  <div class="card"><b>Ánimo y energía (1–5)</b><div class="chart"><canvas id="cMood"></canvas></div></div>
+  <div class="card" id="notes"></div>
+</section>
+
+<section id="t-obj">
+  <h2 style="margin-top:6px">Objetivos saludables</h2>
+  <div class="card" id="goals"></div>
+  <h2>Tus mejores días</h2>
+  <div class="card scroll" id="bestDays"></div>
+  <h2>Qué te afecta</h2>
+  <div class="card">
+    <b>Tus hábitos y factores</b>
+    <div class="muted">Compara los días con cada factor frente a los días sin él. Tamaño: 0,2 pequeño, 0,5 moderado, 0,8 grande.</div>
+    <div id="rel" style="margin-top:6px"></div>
+    <label class="muted" style="display:block;margin-top:8px"><input type="checkbox" id="relAll"> incluir los que aún tienen pocos datos</label>
+  </div>
+  <div class="card"><b>Cómo se relacionan tus datos</b><div id="corr"></div></div>
+  <div class="muted" style="margin:-4px 2px 12px">Son asociaciones, no causas: otras cosas (el ciclo, el trabajo, un catarro) pueden mover los dos datos a la vez.</div>
+  <h2>Ciclo</h2>
+  <div class="card" id="cycleNow2"></div>
+  <div class="card"><b>Tu media por día del ciclo</b><div class="muted">Ánimo (izquierda), sueño y VFC (derecha)</div><div class="chart"><canvas id="cCycle"></canvas></div></div>
+  <div class="card scroll" id="phaseTable"></div>
+</section>
+</main>
+
+<nav>
+  <button data-t="hoy" class="on"><b>◉</b>Hoy</button>
+  <button data-t="rec"><b>♡</b>Recuperar</button>
+  <button data-t="ent"><b>⚡︎</b>Entreno</button>
+  <button data-t="obj"><b>⚑</b>Objetivos</button>
+  <button data-t="animo"><b>✎</b>Registro</button>
+  <button data-go="/comida"><b>◍</b>Comida</button>
+</nav>
+
+<script>
+let D = null, RANGE = 30, TAB = 'hoy';
+try { RANGE = +localStorage.getItem('mg_range') || 30; TAB = localStorage.getItem('mg_tab') || 'hoy'; } catch {}
+if (TAB === 'ciclo') TAB = 'obj';   // el ciclo ahora está dentro de Objetivos
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const CATCOL = {HIIT:'--c2',Fuerza:'--c1',Movilidad:'--c5',Bici:'--c3',Cinta:'--c4',Caminar:'--c7',Otro:'--c6'};
+const PHCOL = {Menstrual:'--ph-m',Folicular:'--ph-f',Ovulatoria:'--ph-o','Lútea':'--ph-l'};
+const charts = [];
+const fmt = (v,d=0) => v==null||Number.isNaN(v) ? '—' : Number(v).toLocaleString('es-ES',{maximumFractionDigits:d,minimumFractionDigits:d});
+const short = s => new Date(s+'T12:00').toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+const last = (arr,k) => { for (let i=arr.length-1;i>=0;i--) if (arr[i][k]!=null) return arr[i]; return null; };
+const esc = s => String(s??'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'})[c]);
+const $ = id => document.getElementById(id);
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const madridDate = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid'}).format(new Date());
+const addDays = (s,n) => { const d = new Date(s+'T12:00'); d.setDate(d.getDate()+n); return ymd(d); };
+const dow = s => (new Date(s+'T12:00').getDay()+6)%7;   // 0 = lunes
+const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+const lowerBetter = {rhr:1, stress_avg:1};
+
+// Pestañas
+function showTab(t){
+  TAB = t; try { localStorage.setItem('mg_tab', t); } catch {}
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 't-'+t));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  window.scrollTo(0,0); render();
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = b.dataset.go ? () => location.href = b.dataset.go : () => showTab(b.dataset.t));
+document.querySelectorAll('.range').forEach(el => {
+  el.innerHTML = [14,30,60,90].map(n => `<button data-n="${n}">${n} días</button>`).join('');
+  el.onclick = e => { const n = +e.target.dataset.n; if (!n) return; RANGE = n; try { localStorage.setItem('mg_range', n); } catch {} render(); };
+});
+
+// Sombreado de fases del ciclo
+Chart.register({id:'phases', beforeDraw(chart,_a,opt){
+  const days = opt.days; if(!days) return;
+  const {ctx, chartArea:a, scales:{x}} = chart; if(!a) return;
+  ctx.save();
+  const w = (x.getPixelForValue(1)-x.getPixelForValue(0)) || (a.right-a.left);
+  days.forEach((d,i)=>{ if(!d.phase) return; ctx.fillStyle = css(PHCOL[d.phase]); ctx.fillRect(x.getPixelForValue(i)-w/2, a.top, w, a.bottom-a.top); });
+  ctx.restore();
+}});
+
+function base(extra={}){
+  const ink = css('--muted'), line = css('--line');
+  return Object.assign({responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:ink,boxWidth:10,font:{size:11}}}, phases:{days:null}},
+    scales:{x:{ticks:{color:ink,maxRotation:0,autoSkip:true,maxTicksLimit:5,font:{size:11}},grid:{display:false}},
+            y:{ticks:{color:ink,font:{size:11}},grid:{color:line}}}}, extra);
+}
+function mk(id, cfg, needs, msg){
+  const el = $(id); if (!el) return;
+  if (!needs){ el.parentElement.innerHTML = `<div class="empty">${msg}</div>`; return; }
+  charts.push(new Chart(el, cfg));
+}
+const has = (arr,k,n=1) => arr.filter(r=>r[k]!=null && r[k]!==0).length >= n;
+
+function cycleHtml(cy){
+  if (!cy) return '<div class="empty">Activa "Salud femenina" en Garmin Connect y registra la regla para ver tu ciclo.</div>';
+  const SYM = {CRAMPS:'dolor',BLOATING:'hinchazón',FATIGUE:'cansancio',HEADACHE:'dolor de cabeza',ACNE:'acné',BREAST_TENDERNESS:'pecho sensible'};
+  return `<b>Día ${cy.cycle_day} de ${cy.cycle_len||28}</b> · fase ${cy.phase?cy.phase.toLowerCase():'—'} <span class="muted">(estimada, ${short(cy.date)})</span>
+    ${cy.symptoms?`<div class="chips">${cy.symptoms.split(',').map(s=>`<span>${esc(SYM[s]||s.toLowerCase())}</span>`).join('')}</div>`:''}
+    <div class="muted" style="margin-top:6px">${cy.phase==='Menstrual'?'Si hay dolor o cansancio, el tabata se puede hacer bajando impacto. Guíate por cómo te sientas.':cy.phase==='Lútea'?'Es normal que la VFC baje y la FC en reposo suba un poco en esta fase.':''}</div>`;
+}
+
+function render(){
+  charts.splice(0).forEach(c=>c.destroy());
+  document.querySelectorAll('.chart').forEach(c=>{ if(!c.querySelector('canvas')) c.innerHTML='<canvas id="'+c.dataset.id+'"></canvas>'; });
+  document.querySelectorAll('.range button').forEach(b => b.classList.toggle('on', +b.dataset.n === RANGE));
+  if (!D || !D.days || !D.days.length){
+    $('semaforo').innerHTML = '<div class="empty">Aún no hay datos. Se subirán solos después de la próxima sincronización del Mac.</div>';
+    return;
+  }
+  $('gen').textContent = 'Act. ' + D.generated_at.slice(5,16).replace('T',' ').replace('-','/');
+  const days = D.days.slice(-RANGE), labels = days.map(d=>short(d.date));
+  const P = {phases:{days}};
+  const c1=css('--c1'), c2=css('--c2'), c3=css('--c3'), c4=css('--c4'), c5=css('--c5'), mu=css('--muted');
+
+  if (TAB === 'hoy'){
+    const S = D.semaforo;
+    const txt = {verde:'Buena recuperación. Plan normal: si toca tabata o fuerza, a por ello.',
+                 ambar:'Recuperación a medias. Entrena, pero baja un escalón: menos series o más descanso, y cardio suave en vez de intervalos.',
+                 rojo:'Día de recuperar: caminar, movilidad y la rutina de psoas/cadera/lumbar.'};
+    const lbl = ['rojo','ámbar','verde'];
+    $('semaforo').innerHTML = S ? `<div class="sem"><div class="dot ${S.level}"></div><div><b>${short(S.date)}: ${S.level==='ambar'?'ámbar':S.level}</b><div>${txt[S.level]}</div>
+       <div class="chips">${Object.entries(S.components).map(([k,v])=>`<span><i class="${['rojo','ambar','verde'][v]}"></i>${esc(k)}: ${lbl[v]}</span>`).join('')}</div></div></div>`
+       : '<div class="empty">El semáforo aparece tras la primera noche con el reloj puesto.</div>';
+    const t = (l,v,s='') => `<div class="card tile"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    const A = D.days, dH=last(A,'hrv_night'), dR=last(A,'rhr'), dS=last(A,'sleep_s'), dB=last(A,'bb_wake'), dT=last(A,'steps'), dV=last(A,'vo2max'), dRd=last(A,'readiness');
+    const wk = D.weeks[D.weeks.length-1] || {};
+    const strength = wk.sessions ? (wk.sessions.Fuerza||0)+(wk.sessions.Movilidad||0) : 0;
+    $('tiles').innerHTML =
+      t('VFC anoche', dH?fmt(dH.hrv_night)+' ms':'—', dH&&dH.hrv_7d?`media 7 d: ${fmt(dH.hrv_7d)}`:'calibrando') +
+      t('FC reposo', dR?fmt(dR.rhr)+' lpm':'—', dR&&dR.rhr_base?`media 30 d: ${fmt(dR.rhr_base,1)}`:'calibrando') +
+      t('Sueño', dS?fmt(dS.sleep_h,1)+' h':'—', dS&&dS.sleep_score?`puntuación ${dS.sleep_score}`:'') +
+      t('Body Battery', dB?fmt(dB.bb_wake):'—', 'al despertar') +
+      t('Preparación', dRd?fmt(dRd.readiness):'—', dRd&&dRd.readiness_level?dRd.readiness_level.toLowerCase():'') +
+      t('Pasos', dT?fmt(dT.steps):'—', dT?short(dT.date):'') +
+      '<div class="card tile" id="kIn"></div><div class="card tile" id="kOut"></div>' +
+      t('Fuerza semana', `${strength} / 2+`, 'sesiones') +
+      t('Intensidad semana', wk.intensity_min!=null?`${fmt(wk.intensity_min)} min`:'—', 'objetivo 150');
+    $('cycleNow').innerHTML = cycleHtml(last(D.days,'cycle_day'));
+    drawKcal();
+  }
+
+  if (TAB === 'rec'){
+    $('phaseLegend').innerHTML = days.some(d=>d.phase) ? Object.keys(PHCOL).map(p=>`<span><b style="background:${css(PHCOL[p]).replace(/[\d.]+\)$/,'.45)')}"></b>${p}</span>`).join('') : '';
+    const lo = days.map(d=> d.hrv_base_low ?? (d.hrv_base!=null? d.hrv_base - d.hrv_base_sd : null));
+    const hi = days.map(d=> d.hrv_base_high ?? (d.hrv_base!=null? d.hrv_base + d.hrv_base_sd : null));
+    mk('cHrv',{type:'line',data:{labels,datasets:[
+        {label:'Rango normal',data:hi,borderWidth:0,pointRadius:0,backgroundColor:c3+'33',fill:'+1'},
+        {label:'_lo',data:lo,borderWidth:0,pointRadius:0,fill:false},
+        {label:'Noche',data:days.map(d=>d.hrv_night),showLine:false,pointRadius:3,backgroundColor:c1,borderColor:c1},
+        {label:'Media 7 d',data:days.map(d=>d.hrv_7d),borderColor:c1,borderWidth:2.5,pointRadius:0,spanGaps:true}]},
+      options:base({plugins:{...base().plugins,...P,legend:{labels:{color:mu,boxWidth:10,font:{size:11},filter:i=>!i.text.startsWith('_')}}}})},
+      has(days,'hrv_night'), 'La VFC se mide mientras duermes. Aparecerá tras la primera noche con el reloj.');
+    mk('cRhr',{type:'line',data:{labels,datasets:[
+        {label:'FC reposo',data:days.map(d=>d.rhr),borderColor:c2,backgroundColor:c2,pointRadius:2,borderWidth:2,spanGaps:true},
+        {label:'Media 30 d',data:days.map(d=>d.rhr_base),borderColor:mu,borderDash:[5,4],pointRadius:0,borderWidth:1.5,spanGaps:true}]},
+      options:base({plugins:{...base().plugins,...P}})}, has(days,'rhr'), 'Sin datos de FC en reposo todavía.');
+    const h = k => days.map(d=>d[k]!=null? +(d[k]/3600).toFixed(2) : null);
+    mk('cSleep',{type:'bar',data:{labels,datasets:[
+        {label:'Profundo',data:h('deep_s'),backgroundColor:c1},{label:'REM',data:h('rem_s'),backgroundColor:c5},
+        {label:'Ligero',data:h('light_s'),backgroundColor:c3+'aa'},{label:'Despierta',data:h('awake_s'),backgroundColor:c4+'aa'}]},
+      options:base({plugins:{...base().plugins,...P},scales:{...base().scales,x:{...base().scales.x,stacked:true},y:{...base().scales.y,stacked:true,suggestedMax:9}}})},
+      has(days,'sleep_s'), 'Duerme con el reloj puesto para ver aquí tus noches.');
+    mk('cBB',{type:'line',data:{labels,datasets:[
+        {label:'Body Battery al despertar',data:days.map(d=>d.bb_wake),borderColor:c3,pointRadius:2,spanGaps:true},
+        {label:'Estrés medio',data:days.map(d=>d.stress_avg),borderColor:c4,pointRadius:2,spanGaps:true}]},
+      options:base({plugins:{...base().plugins,...P},scales:{...base().scales,y:{...base().scales.y,min:0,max:100}}})},
+      has(days,'bb_wake')||has(days,'stress_avg'), 'Sin datos de Body Battery todavía.');
+  }
+
+  if (TAB === 'ent'){
+    const W = D.weeks.slice(-Math.max(4, Math.ceil(RANGE/7)));
+    const cats = D.categories.filter(c=>W.some(w=>w.minutes&&w.minutes[c]));
+    mk('cWeekMin',{type:'bar',data:{labels:W.map(w=>short(w.week)),datasets:cats.map(c=>({label:c,data:W.map(w=>w.minutes[c]||0),backgroundColor:css(CATCOL[c])}))},
+      options:base({scales:{...base().scales,x:{...base().scales.x,stacked:true},y:{...base().scales.y,stacked:true}}})},
+      cats.length, 'Graba tus sesiones con el reloj y aparecerán aquí por tipo.');
+    mk('cLoad',{data:{labels,datasets:[
+        {type:'bar',label:'sRPE',data:days.map(d=>d.srpe||null),backgroundColor:c2+'aa',yAxisID:'y'},
+        {type:'line',label:'Ratio',data:days.map(d=>d.acwr),borderColor:c1,pointRadius:0,borderWidth:2,yAxisID:'y1',spanGaps:true}]},
+      options:base({scales:{...base().scales,y1:{position:'right',min:0,max:2,ticks:{color:mu,font:{size:11}},grid:{display:false}}}})},
+      has(days,'srpe'), 'Al terminar cada sesión, puntúa el esfuerzo (1–10) en el reloj. El ratio necesita 21 días.');
+    mk('cIM',{type:'bar',data:{labels:W.map(w=>short(w.week)),datasets:[
+        {label:'Minutos',data:W.map(w=>w.intensity_min),backgroundColor:W.map(w=>w.intensity_min>=150?css('--green'):c4)}]},
+      options:base({plugins:{...base().plugins,legend:{display:false}}})}, W.length, 'Sin semanas registradas todavía.');
+    mk('cSteps',{type:'bar',data:{labels,datasets:[{label:'Pasos',data:days.map(d=>d.steps),backgroundColor:days.map(d=>(d.steps||0)>=8000?c3:c3+'66')}]},
+      options:base({plugins:{...base().plugins,legend:{display:false}}})}, has(days,'steps'), 'Sin pasos todavía.');
+    const A = D.activities.slice(-15).reverse();
+    $('acts').innerHTML = A.length ? A.map(a=>`<div class="act"><div><span style="color:${css(CATCOL[a.category]||'--c6')}">●</span> <b>${esc(a.name||a.category)}</b>
+        <div class="muted">${short(a.date)} · ${esc(a.category)} · FC ${fmt(a.avg_hr)}/${fmt(a.max_hr)} · efecto ${fmt(a.aerobic_te,1)}/${fmt(a.anaerobic_te,1)}</div></div>
+        <div style="text-align:right"><b>${fmt(a.minutes)} min</b><div class="muted">RPE ${fmt(a.rpe)}</div></div></div>`).join('')
+      : '<div class="empty">Aún no hay sesiones grabadas. Elige en el reloj el perfil correcto: HIIT, Fuerza, Bici interior o Cinta.</div>';
+  }
+
+  if (TAB === 'animo'){
+    mk('cMood',{type:'line',data:{labels,datasets:[
+        {label:'Ánimo',data:days.map(d=>d.mood),borderColor:c2,backgroundColor:c2,pointRadius:2,spanGaps:true},
+        {label:'Energía',data:days.map(d=>d.energy),borderColor:c4,backgroundColor:c4,pointRadius:2,spanGaps:true}]},
+      options:base({plugins:{...base().plugins,...P},scales:{...base().scales,y:{...base().scales.y,min:1,max:5}}})},
+      has(days,'mood'), 'Registra tu ánimo arriba y aparecerá aquí tras la siguiente sincronización.');
+    const N = (D.notes||[]).slice(-10).reverse();
+    $('notes').innerHTML = '<b>Últimas notas</b>' + (N.length ? N.map(n=>`<div class="rel"><span class="muted">${short(n.date)} ${esc(n.ts.slice(11,16))} · ánimo ${fmt(n.mood)} · energía ${fmt(n.energy)}</span><div>${esc(n.note)}</div></div>`).join('')
+      : '<div class="empty">Las notas que escribas aparecerán aquí.</div>');
+  }
+
+  if (TAB === 'obj'){
+    drawGoals(); drawBestDays(); drawRel(); drawCorr();
+    $('cycleNow2').innerHTML = cycleHtml(last(D.days,'cycle_day'));
+    const CP = D.cycle_profile||[];
+    mk('cCycle',{data:{labels:CP.map(c=>'d'+c.day),datasets:[
+        {type:'line',label:'Ánimo',data:CP.map(c=>c.mood),borderColor:c2,backgroundColor:c2,yAxisID:'y',spanGaps:true,pointRadius:2},
+        {type:'line',label:'Sueño',data:CP.map(c=>c.sleep_score),borderColor:c5,backgroundColor:c5,yAxisID:'y1',spanGaps:true,pointRadius:2},
+        {type:'line',label:'VFC',data:CP.map(c=>c.hrv_night),borderColor:c1,backgroundColor:c1,yAxisID:'y1',spanGaps:true,pointRadius:2}]},
+      options:base({scales:{...base().scales,y:{...base().scales.y,min:1,max:5},y1:{position:'right',ticks:{color:mu,font:{size:11}},grid:{display:false}}}})},
+      CP.filter(c=>c.n).length>=10, 'Con unas semanas de registros verás aquí cómo cambian tu ánimo, sueño y VFC a lo largo del ciclo.');
+    const ph = D.phases, keys=[['n','Días',0],['mood','Ánimo',1],['energy','Energía',1],['hrv_night','VFC',0],['rhr','FC rep.',1],['sleep_h','Sueño h',1],['bb_wake','BB',0],['srpe','sRPE',0]];
+    $('phaseTable').innerHTML = Object.values(ph).filter(p=>p.n>0).length>=3 ?
+      `<b>Tus medias por fase</b> <span class="muted">(fiable tras 3 ciclos)</span><table><tr><th>Fase</th>${keys.map(k=>`<th>${k[1]}</th>`).join('')}</tr>
+       ${Object.entries(ph).map(([p,v])=>`<tr><td>${p}</td>${keys.map(k=>`<td>${fmt(v[k[0]],k[2])}</td>`).join('')}</tr>`).join('')}</table>`
+      : '<div class="empty">La comparación por fases aparecerá con al menos un ciclo completo.</div>';
+  }
+}
+// Calorías en Hoy: lo comido (registro del día, que también rellena Comida) y el gasto que da Garmin
+function drawKcal(){
+  const kIn = $('kIn'), kOut = $('kOut'); if (!kIn || !D) return;
+  const T = madridDate(), tile = (l,v,s) => `<div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div>`;
+  const e = LOG.find(x => x.date===T && x.kind==='metric' && x.key==='kcal');
+  const dk = e ? null : [...D.days].reverse().find(d => (d.m_kcal ?? d.kcal_in) != null);
+  kIn.innerHTML = e ? tile('Calorías comidas', fmt(e.value)+' kcal', 'hoy')
+    : dk ? tile('Calorías comidas', fmt(dk.m_kcal ?? dk.kcal_in)+' kcal', dk.date===T ? 'hoy' : short(dk.date))
+    : tile('Calorías comidas', '—', 'apúntalas en Comida');
+  const g = last(D.days,'kcal_total');
+  kOut.innerHTML = g ? tile('Gasto Garmin', fmt(g.kcal_total)+' kcal', `activas: ${fmt(g.kcal_active||0)}<br>incluye metabolismo en reposo${g.date===T?', hasta ahora':''}`)
+    : tile('Gasto Garmin', '—', 'incluye metabolismo en reposo');
+}
+
+// Objetivos saludables: últimos 14 días y semana en curso
+function drawGoals(){
+  const T = madridDate(), L = D.days.filter(d => d.date <= T).slice(-14), full = L.filter(d => d.date < T);
+  const col = f => f >= 1 ? 'var(--green)' : f >= .6 ? 'var(--amber)' : 'var(--red)';
+  const row = (title, value, frac, target, src) => `<div class="goal"><div class="top"><b>${title}</b><span>${value}</span></div>
+      <div class="bar"><i style="width:${Math.max(3, Math.min(100, frac*100))}%;background:${col(frac)}"></i></div>
+      <div class="muted">${target}</div><div class="src">${src}</div></div>`;
+  const wait = (title, msg, src) => `<div class="goal"><div class="top"><b>${title}</b></div><div class="muted">${msg}</div><div class="src">${src}</div></div>`;
+  const out = [];
+  const N = L.filter(d => d.sleep_h != null);
+  out.push(N.length >= 3 ? (() => { const ok = N.filter(d => d.sleep_h >= 7).length;
+      return row('Dormir 7 h o más', `${ok} de ${N.length} noches`, ok/N.length/.8, `Objetivo: 8 de cada 10 noches · media ${fmt(mean(N.map(d=>d.sleep_h)),1)} h`, 'AASM y Sleep Research Society: los adultos necesitan 7 h o más'); })()
+    : wait('Dormir 7 h o más', `Aparecerá cuando haya 3 noches con el reloj (llevas ${N.length}).`, 'AASM y Sleep Research Society: 7 h o más'));
+  const S = full.filter(d => d.steps);
+  out.push(S.length >= 3 ? (() => { const ok = S.filter(d => d.steps >= 8000).length;
+      return row('8.000 pasos al día', `${ok} de ${S.length} días`, ok/S.length/.8, `Objetivo: 8 de cada 10 días · media ${fmt(mean(S.map(d=>d.steps)))} pasos`, 'Metaanálisis Lancet Public Health 2022: el beneficio se estabiliza hacia 8.000–10.000 pasos'); })()
+    : wait('8.000 pasos al día', `Aparecerá cuando haya 3 días completos con el reloj (llevas ${S.length}).`, 'Lancet Public Health 2022: beneficio hacia 8.000–10.000 pasos'));
+  const mon = addDays(T, -dow(T)), wk = (D.weeks||[]).find(w => w.week === mon) || {};
+  const im = wk.intensity_min || 0, st = wk.sessions ? (wk.sessions.Fuerza||0) + (wk.sessions.Movilidad||0) : 0;
+  out.push(row('Minutos de intensidad', `${fmt(im)} / 150 min`, im/150, `Esta semana (desde el lunes ${short(mon)}) · 300 aún mejor`, 'OMS 2020: 150–300 min moderados a la semana (los vigorosos cuentan doble)'));
+  out.push(row('Sesiones de fuerza', `${st} / 2`, st/2, 'Esta semana · cuentan Fuerza y Movilidad grabadas en el reloj (el tabata se graba como HIIT)', 'OMS 2020: ejercicios de fuerza 2 o más días por semana'));
+  const PT = D.protein_target || 1.6, P = L.filter(d => d.protein_gkg != null);
+  out.push(P.length >= 3 ? (() => { const ok = P.filter(d => d.protein_gkg >= PT).length, avg = mean(P.map(d=>d.protein_gkg));
+      return row('Proteína', `${fmt(avg,1)} g/kg`, avg/PT, `Objetivo: ${fmt(PT,1)} g/kg · lo alcanzas ${ok} de ${P.length} días`, 'Morton et al. 2018 (BJSM): con fuerza, hasta ~1,6 g/kg al día ayuda a ganar músculo'); })()
+    : wait('Proteína', `Aparecerá cuando apuntes proteína (o comidas) y peso 3 días (llevas ${P.length}).`, 'Morton et al. 2018: ~1,6 g/kg al día con entrenamiento de fuerza'));
+  const M = L.filter(d => d.mood != null);
+  out.push(M.length >= 3 ? (() => { const avg = mean(M.map(d=>d.mood));
+      return row('Ánimo medio', `${fmt(avg,1)} / 5`, avg/4, `Referencia: 4 (bien) o más · ${M.length} días con registro`, 'Tu registro de ánimo del reloj y de la pestaña Registro'); })()
+    : wait('Ánimo medio', `Aparecerá cuando registres el ánimo 3 días (llevas ${M.length}).`, 'Tu registro de ánimo (1–5)'));
+  const nw = L.filter(d => d.rhr != null || d.sleep_h != null || d.steps).length;
+  $('goals').innerHTML = `<div class="muted">Últimos 14 días · llevas ${nw} día${nw===1?'':'s'} con el reloj</div>` + out.join('');
+}
+
+// Tus mejores días: media por día de la semana (mínimo 2 valores por día)
+function drawBestDays(){
+  const T = madridDate(), DW = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+  const BM = [['mood','Ánimo',1],['sleep_score','Sueño',0],['bb_wake','BB',0],['hrv_night','VFC',0],['stress_avg','Estrés',0]];
+  const res = BM.map(([k,label,dec]) => {
+    const g = DW.map(() => []);
+    D.days.forEach(d => { if (d[k] != null && (k !== 'stress_avg' || d.date < T)) g[dow(d.date)].push(d[k]); });
+    const avg = g.map(a => a.length >= 2 ? mean(a) : null), ok = avg.map((v,i) => v != null ? i : -1).filter(i => i >= 0);
+    const better = (a,b) => lowerBetter[k] ? avg[a] < avg[b] : avg[a] > avg[b];
+    const best = ok.length >= 2 ? ok.reduce((a,b) => better(b,a) ? b : a) : null, worst = ok.length >= 2 ? ok.reduce((a,b) => better(a,b) ? b : a) : null;
+    return {k, label, dec, avg, best, worst};
+  });
+  if (!res.some(r => r.best != null)) {
+    $('bestDays').innerHTML = `<div class="empty">Aparecerá cuando haya al menos 2 registros de cada día de la semana, unas 2–3 semanas con el reloj (llevas ${D.days.filter(d=>d.rhr!=null||d.sleep_h!=null).length} días).</div>`;
+    return;
+  }
+  const lines = res.filter(r => r.best != null).map(r => `<div class="rel"><b>${r.label}</b>: mejor el ${DW[r.best]} (${fmt(r.avg[r.best],r.dec)}), peor el ${DW[r.worst]} (${fmt(r.avg[r.worst],r.dec)})</div>`);
+  $('bestDays').innerHTML = `<table class="wk"><tr><th></th>${res.map(r=>`<th>${r.label}</th>`).join('')}</tr>
+    ${DW.map((w,i) => `<tr><td>${w.slice(0,3)}</td>${res.map(r => `<td class="${i===r.best?'best':i===r.worst?'worst':''}">${r.avg[i]==null?'<span class="muted">·</span>':fmt(r.avg[i],r.dec)}</td>`).join('')}</tr>`).join('')}</table>
+    <div class="muted" style="margin:6px 0 4px">Verde: tu mejor día · rojo: el peor (en estrés, más bajo es mejor) · «·» = faltan datos (menos de 2 valores ese día)</div>${lines.join('')}`;
+}
+
+// Qué te afecta: factores (hábitos, ciclo, entreno...) de relations[], agrupados por resultado
+function drawRel(){
+  const R = D.relations||[], all = $('relAll').checked;
+  const GROUPS = [['Ánimo',['mood']],['Energía',['energy']],['Sueño',['sleep_score','sleep_h']],['VFC',['hrv_night']],['Body Battery al despertar',['bb_wake']],['Estrés',['stress_avg']]];
+  const html = GROUPS.map(([name, keys]) => {
+    const rows = R.filter(r => keys.includes(r.key) && (all || r.enough)).sort((a,b) => Math.abs(b.effect||0) - Math.abs(a.effect||0)).slice(0, 4);
+    if (!rows.length) return '';
+    return `<div class="grp">${name}</div>` + rows.map(r => { const good = (r.diff>0) !== !!lowerBetter[r.key], big = Math.abs(r.effect||0) >= 0.2;
+      return `<div class="rel"><b>${esc(r.factor)}</b> → ${esc(r.outcome)}: <span class="${big?(good?'pos':'neg'):''}">${r.diff>0?'+':''}${fmt(r.diff,1)}</span>
+        <div class="muted">con ${fmt(r.with,1)} · sin ${fmt(r.without,1)} · tamaño ${fmt(Math.abs(r.effect||0),2)} · ${r.n_with}/${r.n_without} días${r.enough?'':' · pocos datos'}</div></div>`; }).join('');
+  }).join('');
+  $('rel').innerHTML = html || `<div class="empty">Aparecerá cuando haya al menos ${D.min_n||8} días con y ${D.min_n||8} sin cada factor (marca tus hábitos en Registro).</div>`;
+  $('relAll').onchange = drawRel;
+}
+
+// Correlaciones con desfase: ¿lo de un día se nota después?
+function drawCorr(){
+  const byDate = new Map(D.days.map(d => [d.date, d])), MIN = 14;
+  const logK = new Map(LOG.filter(e => e.kind==='metric' && e.key==='kcal').map(e => [e.date, e.value]));
+  const watch = d => d.rhr != null || d.steps != null;
+  const get = {sleep_h: d => d.sleep_h, mood: d => d.mood, bb_wake: d => d.bb_wake, hrv_night: d => d.hrv_night, sleep_score: d => d.sleep_score,
+    stress_avg: d => d.stress_avg, srpe: d => watch(d) ? d.srpe : null, kcal: d => d.m_kcal ?? d.kcal_in ?? logK.get(d.date) ?? null};
+  // Garmin guarda el sueño en el día en que te despiertas: la noche "del día d" está en d+1
+  const PAIRS = [
+    ['sleep_h','mood',0,'Horas de sueño → ánimo de ese día','Cuando duermes más, al día siguiente tu ánimo tiende a ser mejor.','Cuando duermes más, al día siguiente tu ánimo tiende a ser peor.'],
+    ['sleep_h','bb_wake',0,'Horas de sueño → Body Battery al despertar','Cuando duermes más, al día siguiente tu Body Battery tiende a ser más alto.','Cuando duermes más, al día siguiente tu Body Battery tiende a ser más bajo.'],
+    ['sleep_h','hrv_night',0,'Horas de sueño → VFC de esa noche','Las noches que duermes más, tu VFC tiende a ser más alta.','Las noches que duermes más, tu VFC tiende a ser más baja.'],
+    ['stress_avg','sleep_score',1,'Estrés del día → sueño de esa noche','Los días de más estrés, esa noche tu sueño tiende a puntuar mejor.','Los días de más estrés, esa noche tu sueño tiende a puntuar peor.'],
+    ['srpe','hrv_night',1,'Carga de entreno → VFC de esa noche','Tras los días de más carga de entreno, esa noche tu VFC tiende a ser más alta.','Tras los días de más carga de entreno, esa noche tu VFC tiende a ser más baja.'],
+    ['srpe','bb_wake',1,'Carga de entreno → Body Battery al día siguiente','Tras los días de más carga, al día siguiente te despiertas con el Body Battery más alto.','Tras los días de más carga, al día siguiente te despiertas con el Body Battery más bajo.'],
+    ['kcal','bb_wake',1,'Calorías comidas → Body Battery al día siguiente','Los días que comes más, al día siguiente tu Body Battery al despertar tiende a ser más alto.','Los días que comes más, al día siguiente tu Body Battery al despertar tiende a ser más bajo.'],
+  ];
+  const strength = r => Math.abs(r) < .1 ? 'sin relación clara' : Math.abs(r) < .3 ? 'débil' : Math.abs(r) < .5 ? 'moderada' : 'fuerte';
+  $('corr').innerHTML = PAIRS.map(([xk, yk, lag, title, pos, neg]) => {
+    const xs = [], ys = [];
+    D.days.forEach(d => { const n = byDate.get(addDays(d.date, lag)); if (!n) return;
+      const x = get[xk](d), y = get[yk](n); if (x != null && y != null) { xs.push(x); ys.push(y); } });
+    const n = xs.length;
+    if (n < MIN) return `<div class="rel"><b>${title}</b><div class="muted">Aparecerá cuando haya ${MIN} días con los dos datos (llevas ${n}).</div></div>`;
+    const mx = mean(xs), my = mean(ys); let sxy = 0, sxx = 0, syy = 0;
+    xs.forEach((x,i) => { sxy += (x-mx)*(ys[i]-my); sxx += (x-mx)**2; syy += (ys[i]-my)**2; });
+    const r = sxx && syy ? sxy/Math.sqrt(sxx*syy) : 0, good = (r > 0) !== !!lowerBetter[yk];
+    const txt = Math.abs(r) < .1 ? 'Por ahora no se ve relación clara.' : (r > 0 ? pos : neg);
+    return `<div class="rel"><b>${title}</b><div class="${Math.abs(r)>=.3?(good?'pos':'neg'):''}">${txt}</div>
+      <div class="muted">r = ${fmt(r,2)} (${strength(r)}) · n = ${n} días</div></div>`;
+  }).join('') + '<div class="muted" style="margin-top:6px">r va de −1 a 1: 0,1 débil, 0,3 moderada, 0,5 fuerte.</div>';
+}
+
+// Actualizar desde Garmin: el móvil deja la petición y el Mac (sync_poll.py, cada minuto) sincroniza y sube el panel
+let SYNC = null, syncTimer = null;
+const hhmm = s => new Date(s).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+const syncPending = s => !!(s && s.requested && !s.done && Date.now() - Date.parse(s.requested) < 6*3600e3);
+function drawSync(){
+  const s = SYNC, msg = $('syncMsg'), pend = syncPending(s);
+  $('syncBtn').disabled = pend;
+  let t = '';
+  if (pend) {
+    const mins = (Date.now() - Date.parse(s.requested)) / 6e4;
+    t = s.started && mins <= 15 ? `Pedido a las ${hhmm(s.requested)}. El Mac está sincronizando con Garmin…`
+      : mins > 10 ? `Pedido a las ${hhmm(s.requested)}. El Mac parece apagado o dormido: se actualizará en cuanto se encienda.`
+      : `Pedido a las ${hhmm(s.requested)}. Se actualiza en 1–2 minutos si el Mac está encendido.`;
+  } else if (s && s.done && Date.now() - Date.parse(s.done) < 3600e3) {
+    t = s.ok === false ? `No se pudo actualizar desde Garmin (${s.error || 'error'}). Prueba más tarde.` : `Actualizado a las ${hhmm(s.done)}.`;
+  }
+  msg.textContent = t; msg.style.marginTop = t ? '8px' : '0';
+}
+async function pollSync(){
+  clearTimeout(syncTimer);
+  try {
+    const r = await fetch('/api/sync/status', {credentials:'same-origin', cache:'no-store'});
+    if (r.status === 401) { location.href = '/login'; return; }
+    if (r.ok) SYNC = await r.json();
+  } catch {}
+  if (SYNC && SYNC.generated_at && D && SYNC.generated_at !== D.generated_at) await load(true);   // datos nuevos: recargar
+  drawSync();
+  if (syncPending(SYNC) && document.visibilityState === 'visible') syncTimer = setTimeout(pollSync, 15e3);
+}
+$('syncBtn').onclick = async () => {
+  $('syncBtn').disabled = true;
+  try {
+    const r = await fetch('/api/sync/request', {method:'POST', credentials:'same-origin'});
+    if (r.status === 401) return location.href = '/login';
+    const b = await r.json();
+    if (r.status === 429) {
+      $('syncMsg').textContent = `${b.done ? `Ya se actualizó a las ${hhmm(b.done)}. ` : ''}Para no saturar a Garmin, podrás pedirlo otra vez a las ${hhmm(b.again_at)}.`;
+      $('syncMsg').style.marginTop = '8px'; $('syncBtn').disabled = false; return;
+    }
+    if (!r.ok) throw new Error();
+    SYNC = {...SYNC, ...b, done: null, started: b.started || null};
+    drawSync(); clearTimeout(syncTimer); syncTimer = setTimeout(pollSync, 15e3);
+  } catch { $('syncMsg').textContent = 'No se pudo pedir. ¿Hay conexión?'; $('syncMsg').style.marginTop = '8px'; $('syncBtn').disabled = false; }
+};
+
+// Guardar el id de cada canvas para poder recrearlos
+document.querySelectorAll('.chart').forEach(c=>c.dataset.id = c.querySelector('canvas').id);
+
+// Registro de ánimo
+const MOOD = ['😞','🙁','😐','🙂','😄'], ENERGY = ['🪫','😮‍💨','😐','💪','⚡️'];
+const pick = {mood:null, energy:null};
+function scale(id, icons, key, words){
+  $(id).innerHTML = icons.map((ic,i)=>`<button data-v="${i+1}">${ic}<small>${words[i]}</small></button>`).join('');
+  $(id).onclick = e => { const b = e.target.closest('button'); if(!b) return;
+    pick[key] = +b.dataset.v; $(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); $('saveMood').disabled = !pick.mood; };
+}
+scale('sMood', MOOD, 'mood', ['1','2','3','4','5']);
+scale('sEnergy', ENERGY, 'energy', ['1','2','3','4','5']);
+const localIso = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset()*6e4).toISOString().slice(0,19); };
+$('saveMood').onclick = async () => {
+  $('saveMood').disabled = true;
+  try {
+    const r = await fetch('/api/mood', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+      body: JSON.stringify({ts: localIso(), mood: pick.mood, energy: pick.energy, note: $('note').value})});
+    if (r.status === 401) return location.href = '/login';
+    if (!r.ok) throw new Error();
+    $('moodMsg').textContent = 'Guardado. Entra en las gráficas con la próxima sincronización del Mac.';
+    pick.mood = pick.energy = null; $('note').value = '';
+    document.querySelectorAll('.scale button').forEach(x=>x.classList.remove('on'));
+    loadMoods();
+  } catch { $('moodMsg').textContent = 'No se pudo guardar. ¿Hay conexión?'; $('saveMood').disabled = false; }
+};
+async function loadMoods(){
+  try {
+    const r = await fetch('/api/mood', {credentials:'same-origin'}); if (!r.ok) return;
+    const M = (await r.json()).slice(-5).reverse();
+    $('pending').innerHTML = '<b>Tus últimos registros desde el móvil</b>' + (M.length ? M.map(m=>`<div class="rel"><span class="muted">${esc(m.ts.slice(5,16).replace('T',' '))}</span> · ${MOOD[m.mood-1]||''} ${m.energy?ENERGY[m.energy-1]:''} ${esc(m.note)}</div>`).join('') : '<div class="empty">Ninguno todavía.</div>');
+  } catch {}
+}
+
+// Hábitos y medidas del día
+let CFG = null, LOG = [];
+const today = () => localIso().slice(0,10);
+$('logDate').value = today();
+$('logDate').max = today();
+const val = (kind,key) => { const e = LOG.find(e=>e.date===$('logDate').value && e.kind===kind && e.key===key); return e ? e.value : null; };
+async function saveLog(kind, key, value){
+  const r = await fetch('/api/log', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+    body: JSON.stringify({date: $('logDate').value, kind, key, value})});
+  if (r.status === 401) { location.href = '/login'; return false; }
+  if (!r.ok) return false;
+  const e = await r.json();
+  LOG = LOG.filter(x => !(x.date===$('logDate').value && x.kind===kind && x.key===key));
+  if (e.value != null) LOG.push(e);
+  return true;
+}
+function drawLog(){
+  if (!CFG) return;
+  $('habits').innerHTML = '<b>Hábitos</b><div class="muted">Marca sí o no; los días sin marcar no cuentan.</div>' + (CFG.habits.length ? CFG.habits.map(h=>{
+      const v = val('habit', h.key);
+      return `<div class="hab"><span>${esc(h.label)}</span><div class="yn" data-key="${h.key}">
+        <button data-v="1" class="${v===1?'on':''}">Sí</button><button data-v="0" class="no ${v===0?'on':''}">No</button></div></div>`}).join('')
+    : '<div class="empty">Sin hábitos. Pulsa "Editar lista".</div>');
+  $('metrics').innerHTML = '<b>Medidas</b>' + (CFG.metrics.length ? CFG.metrics.map(m=>{
+      const v = val('metric', m.key);
+      return `<div class="met"><span>${esc(m.label)}</span><input type="number" inputmode="decimal" step="${m.step||1}" data-key="${m.key}" value="${v??''}" class="${v!=null?'saved':''}"><small>${esc(m.unit||'')}</small></div>`}).join('')
+    : '<div class="empty">Sin medidas. Pulsa "Editar lista".</div>');
+}
+$('habits').onclick = async e => {
+  const b = e.target.closest('.yn button'); if (!b) return;
+  const key = b.parentElement.dataset.key, v = +b.dataset.v;
+  const next = val('habit', key) === v ? null : v;   // pulsar otra vez lo desmarca
+  if (await saveLog('habit', key, next)) drawLog();
+};
+$('metrics').addEventListener('change', async e => {
+  const i = e.target; if (!i.dataset.key) return;
+  const v = i.value === '' ? null : Number(i.value.replace(',', '.'));
+  i.classList.toggle('saved', (await saveLog('metric', i.dataset.key, v)) && v != null);
+});
+$('logDate').onchange = drawLog;
+async function loadLog(){
+  try {
+    const [c, l] = await Promise.all([fetch('/api/config',{credentials:'same-origin'}), fetch('/api/log',{credentials:'same-origin'})]);
+    if (c.ok) CFG = await c.json();
+    if (l.ok) LOG = await l.json();
+    drawLog(); drawKcal();
+  } catch {}
+}
+const slug = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40) || 'x';
+function drawEditor(){
+  const row = (kind, x, i) => `<div class="row"><input data-kind="${kind}" data-i="${i}" data-f="label" value="${esc(x.label)}">
+    ${kind==='metrics'?`<input data-kind="${kind}" data-i="${i}" data-f="unit" value="${esc(x.unit||'')}" placeholder="unidad" style="flex:0 0 70px">`:''}
+    <button class="icon" data-del="${kind}:${i}" aria-label="Quitar">✕</button></div>`;
+  $('editor').innerHTML = `<b>Hábitos</b>${CFG.habits.map((h,i)=>row('habits',h,i)).join('')}<button class="link" data-add="habits">+ Añadir hábito</button>
+    <div style="height:10px"></div><b>Medidas</b>${CFG.metrics.map((m,i)=>row('metrics',m,i)).join('')}<button class="link" data-add="metrics">+ Añadir medida</button>
+    <div class="muted" style="margin-top:8px">Quitar algo de la lista no borra lo que ya registraste.</div>
+    <button class="primary" id="saveCfg">Guardar lista</button>`;
+}
+$('editBtn').onclick = () => {
+  const ed = $('editor'), open = ed.style.display === 'none';
+  ed.style.display = open ? 'block' : 'none'; $('editBtn').textContent = open ? 'Cerrar' : 'Editar lista';
+  if (open && CFG) drawEditor();
+};
+$('editor').addEventListener('input', e => { const t = e.target; if (t.dataset.f) CFG[t.dataset.kind][+t.dataset.i][t.dataset.f] = t.value; });
+$('editor').onclick = async e => {
+  const t = e.target;
+  if (t.dataset.del){ const [k,i] = t.dataset.del.split(':'); CFG[k].splice(+i,1); drawEditor(); }
+  if (t.dataset.add){ CFG[t.dataset.add].push(t.dataset.add==='metrics' ? {key:'', label:'', unit:'', step:1} : {key:'', label:''}); drawEditor(); }
+  if (t.id === 'saveCfg'){
+    for (const k of ['habits','metrics']) CFG[k] = CFG[k].filter(x=>x.label.trim()).map(x=>({...x, key: x.key || slug(x.label)}));
+    const r = await fetch('/api/config', {method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify(CFG)});
+    if (r.ok){ CFG = await r.json(); $('editBtn').click(); drawLog(); }
+  }
+};
+
+async function load(fromSync){
+  $('reload').style.opacity = .4;
+  try {
+    const r = await fetch('/api/data', {credentials:'same-origin', cache:'no-store'});
+    if (r.status === 401) { location.href = '/login'; return; }
+    D = await r.json();
+  } catch { /* sin conexión: el service worker devuelve lo último guardado */ }
+  $('reload').style.opacity = 1;
+  render(); loadMoods(); loadLog();
+  if (!fromSync) pollSync();
+}
+$('reload').onclick = () => load();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+
+// Recordatorio diario (avisos web: en iPhone solo desde el icono de la pantalla de inicio)
+const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
+async function drawRemind(){
+  const txt = $('remindTxt'), btn = $('remindBtn'), test = $('remindTest');
+  btn.style.display = test.style.display = 'none'; txt.textContent = '';
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    txt.textContent = 'Para recibir avisos, abre Mi Garmin desde su icono en la pantalla de inicio (Compartir › Añadir a pantalla de inicio).';
+    return;
+  }
+  let at = '22:00'; try { at = (await (await fetch('/api/push/key', {credentials:'same-origin'})).json()).at; } catch {}
+  const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+  $('remindTitle').textContent = `Recordatorio diario · ${at}`;
+  if (Notification.permission === 'denied') {
+    txt.textContent = 'Los avisos están bloqueados. Actívalos en Ajustes › Notificaciones › Mi Garmin.';
+  } else if (sub) {
+    btn.textContent = 'Desactivar recordatorio'; btn.style.display = test.style.display = '';
+  } else {
+    btn.textContent = 'Activar recordatorio'; btn.style.display = '';
+  }
+}
+$('remindBtn').onclick = async () => {
+  $('remindMsg').textContent = '';
+  try {
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await fetch('/api/push/unsubscribe', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({endpoint: sub.endpoint})});
+      await sub.unsubscribe();
+    } else {
+      if (await Notification.requestPermission() !== 'granted') return drawRemind();
+      const {key} = await (await fetch('/api/push/key', {credentials:'same-origin'})).json();
+      const s = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64ToBytes(key)});
+      const r = await fetch('/api/push/subscribe', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify(s)});
+      if (!r.ok) throw new Error();
+      $('remindMsg').textContent = 'Listo.'; setTimeout(() => $('remindMsg').textContent = '', 4000);
+    }
+  } catch { $('remindMsg').textContent = 'No se pudo cambiar. ¿Hay conexión?'; }
+  drawRemind();
+};
+$('remindTest').onclick = async () => {
+  try {
+    const r = await (await fetch('/api/push/test', {method:'POST', credentials:'same-origin'})).json();
+    $('remindMsg').textContent = r.sent ? 'Enviado. Debería llegarte en unos segundos.' : 'No se pudo enviar el aviso.';
+  } catch { $('remindMsg').textContent = 'No se pudo enviar. ¿Hay conexión?'; }
+};
+drawRemind();
+if (location.hash === '#registro') { TAB = 'animo'; history.replaceState(null, '', '/'); }
+window.addEventListener('hashchange', () => { if (location.hash === '#registro') { history.replaceState(null, '', '/'); showTab('animo'); } });
+showTab(TAB); load();
+</script>
+</body>
+</html>

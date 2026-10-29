@@ -1,0 +1,29 @@
+# Mi Garmin (móvil) en Fly.io. Desplegar con ./deploy.sh (copia sync/ y nutrition/ a la imagen)
+app = "mi-garmin-magda"
+primary_region = "cdg"
+swap_size_mb = 512  # margen de memoria para la sincronización con Garmin (Python) junto a la app
+
+[build]
+
+[[mounts]]
+  source = "garmin_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1  # encendida siempre: el recordatorio de las 22:00 sale del servidor
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

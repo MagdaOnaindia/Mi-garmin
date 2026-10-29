@@ -1,0 +1,36 @@
+# Secretos
+.secrets
+**/.secrets
+.env
+.env.*
+*.pem
+*.key
+.garminconnect/
+garmin_tokens*.json
+
+# Datos personales (salud, comidas, registros)
+data/
+*.db
+*.db-*
+*.sqlite*
+*.zip
+*.tgz
+*.csv
+*.log
+*.lock
+dashboard/data.js
+comida/estado.json
+comida/mine_solved.json
+comida/nuevos/
+backups/
+capturas/
+
+# Generados
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Sistema
+.DS_Store
